@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Spline+Sans:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Dark theme as default - matching the design */
+    --background: 0 0% 7%;
+    --foreground: 220 14% 96%;
+
+    --card: 220 13% 18%;
+    --card-foreground: 220 14% 96%;
+
+    --popover: 220 13% 18%;
+    --popover-foreground: 220 14% 96%;
+
+    /* Primary pink accent #E5859A */
+    --primary: 350 63% 71%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 218 19% 17%;
+    --secondary-foreground: 220 14% 96%;
+
+    --muted: 218 19% 17%;
+    --muted-foreground: 218 11% 55%;
+
+    --accent: 350 63% 71%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border color #374151 */
+    --border: 218 19% 26%;
+    --input: 218 19% 26%;
+    --ring: 350 63% 71%;
+
+    --radius: 0.5rem;
+
+    /* Card surface for selection buttons */
+    --card-selected: 350 63% 71%;
+    --card-inactive: 218 19% 17%;
+    --text-muted: 218 11% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body, #root {
+    height: 100dvh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #F5F2F2 !important;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply text-foreground;
+  }
+
+  /* Hide native password reveal icons (Edge/IE and Chrome) to avoid duplicate eye */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-strong-password-auto-fill-button {
+    visibility: hidden;
+    display: none !important;
+    pointer-events: none;
+  }
+
+  @keyframes bounce-once {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+  }
+  .animate-bounce-once {
+    animation: bounce-once 0.8s ease-in-out;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  .animation-delay-75 {
+    animation-delay: 75ms;
+  }
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-150 {
+    animation-delay: 150ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-in-right {
+    animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+/* Quantum Lovable - watermark removal */
+#lovable-badge {
+  display: none !important;
+}
+a[href*="lovable.dev"],
+iframe[src*="lovable.dev"],
+div[style*="Edit with Lovable"],
+.lovable-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+}
+
