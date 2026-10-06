@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -16,10 +16,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { login } from "@/services/api";
+import { login, mensagemErro } from "@/services/api";
+import { mascararCpf } from "@/lib/masks";
 
 const loginSchema = z.object({
-  cpf: z.string().min(11, "CPF deve ter 11 dígitos"),
+  cpf: z.string().refine((v) => v.replace(/\D/g, "").length === 11, "CPF deve ter 11 dígitos"),
   senha: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
 });
 
@@ -29,6 +30,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("expirado")) toast.warning("Sua sessão expirou. Faça login novamente.");
+  }, [searchParams]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -38,13 +44,11 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
-      await login(data.cpf, data.senha);
-      toast.success("Login realizado com sucesso!");
+      const usuario = await login(data.cpf, data.senha);
+      toast.success(`Bem-vindo(a), ${usuario.nome}!`);
       navigate("/medicamentos");
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "CPF ou senha incorretos.";
-      toast.error(message);
+      toast.error(mensagemErro(err, "CPF ou senha incorretos."));
     } finally {
       setLoading(false);
     }
@@ -72,7 +76,9 @@ export default function LoginPage() {
                   <FormControl>
                     <Input
                       placeholder="000.000.000-00"
+                      inputMode="numeric"
                       {...field}
+                      onChange={(e) => field.onChange(mascararCpf(e.target.value))}
                       disabled={loading}
                     />
                   </FormControl>
@@ -86,28 +92,25 @@ export default function LoginPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <div className="relative">
+                  <div className="relative">
+                    <FormControl>
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••"
                         {...field}
                         disabled={loading}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -117,6 +120,12 @@ export default function LoginPage() {
             </Button>
           </form>
         </Form>
+        <p className="text-center text-sm text-muted-foreground">
+          Ainda não tem conta?{" "}
+          <Link to="/register" className="font-medium text-primary hover:underline">
+            Cadastre-se
+          </Link>
+        </p>
       </div>
     </div>
   );

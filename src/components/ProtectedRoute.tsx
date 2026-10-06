@@ -1,25 +1,23 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Navigate } from "react-router-dom";
+
+import { getUsuario, type Perfil } from "@/services/api";
+import AcessoNegado from "@/pages/AcessoNegado";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: Perfil[];
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const navigate = useNavigate();
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const token = localStorage.getItem("access_token");
-  const user = localStorage.getItem("user");
+  const usuario = getUsuario();
 
-  useEffect(() => {
-    if (!token || !user) {
-      toast.error("Faça login para continuar.");
-      navigate("/", { replace: true });
-    }
-  }, [token, user, navigate]);
+  if (!token || !usuario) {
+    return <Navigate to="/login" replace />;
+  }
 
-  if (!token || !user) {
-    return null;
+  if (allowedRoles && !allowedRoles.includes(usuario.tipo_perfil)) {
+    return <AcessoNegado />;
   }
 
   return <>{children}</>;
