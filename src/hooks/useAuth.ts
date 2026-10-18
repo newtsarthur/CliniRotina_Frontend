@@ -3,7 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 
-interface Profile {
+export interface Profile {
   id: string;
   email: string | null;
   full_name: string | null;
@@ -25,7 +25,7 @@ export function useAuth() {
   const cachedUser = (() => {
     try {
       const u = localStorage.getItem("sb_cached_user");
-      return u ? JSON.parse(u) as User : null;
+      return u ? (JSON.parse(u) as User) : null;
     } catch {
       return null;
     }
@@ -34,7 +34,7 @@ export function useAuth() {
   const cachedProfile = (() => {
     try {
       const p = localStorage.getItem("sb_cached_profile");
-      return p ? JSON.parse(p) as Profile : null;
+      return p ? (JSON.parse(p) as Profile) : null;
     } catch {
       return null;
     }
@@ -60,17 +60,23 @@ export function useAuth() {
   const [loading, setLoading] = useState(!cachedProfile); // Only show loading skeleton if we have no cache
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadProfile = async (userId: string) => {
       try {
-        const { data } = await withTimeout(
-          supabase
+        const { data, error } = await withTimeout(
+          Promise.resolve(supabase
             .from("profiles")
-            .select("id,email,full_name,user_type,phone,cpf,birth_date,address,city,state,zip_code,doctor_id,avatar_url,notifications_enabled")
+            .select(
+              "id,email,full_name,user_type,phone,cpf,birth_date,address,city,state,zip_code,doctor_id,avatar_url,notifications_enabled"
+            )
             .eq("id", userId)
-            .maybeSingle(),
+            .maybeSingle()),
           30000,
           "carregamento do perfil"
         );
+
+        if (error) throw error;
 
         if (data) {
           const loaded = data as Profile;
@@ -83,67 +89,68 @@ export function useAuth() {
       }
     };
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        const u = session?.user ?? null;
-        setUser(u);
-        
-        if (u) {
-          localStorage.setItem("sb_cached_user", JSON.stringify(u));
-          loadProfile(u.id).then((loadedProfile) => {
-            if (loadedProfile) {
-              setProfile(loadedProfile);
-            }
-            setLoading(false);
-          });
-        } else {
-          setProfile(null);
-          localStorage.removeItem("sb_cached_user");
-          localStorage.removeItem("sb_cached_profile");
-          setLoading(false);
-        }
-      }
-    );
+    const handleSession = async (currentSession: Session | null) => {
+      if (!isMounted) return;
 
-    // Initial session load check
-    withTimeout(supabase.auth.getSession(), 30000, "sessão inicial").then(({ data: { session } }) => {
-      setSession(session);
-      const u = session?.user ?? null;
+      setSession(currentSession);
+      const u = currentSession?.user ?? null;
       setUser(u);
-      
+
       if (u) {
         localStorage.setItem("sb_cached_user", JSON.stringify(u));
-        loadProfile(u.id).then((loadedProfile) => {
-          if (loadedProfile) {
-            setProfile(loadedProfile);
-          }
-          setLoading(false);
-        });
+        const loadedProfile = await loadProfile(u.id);
+        if (!isMounted) return;
+        if (loadedProfile) {
+          setProfile(loadedProfile);
+        }
+        setLoading(false);
       } else {
         setProfile(null);
         localStorage.removeItem("sb_cached_user");
         localStorage.removeItem("sb_cached_profile");
         setLoading(false);
       }
-    }).catch(() => {
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
+    };
+
+    // Set up auth state listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      // Ignora o evento inicial aqui pois o getSession() abaixo já cuida disso com timeout
+      if (event === "INITIAL_SESSION") return;
+      handleSession(currentSession);
     });
 
+    // Initial session load check
+    withTimeout(supabase.auth.getSession(), 30000, "sessão inicial")
+      .then(({ data: { session: initialSession } }) => {
+        handleSession(initialSession);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      });
+
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("userType");
-    localStorage.removeItem("sb_cached_user");
-    localStorage.removeItem("sb_cached_profile");
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      localStorage.removeItem("userType");
+      localStorage.removeItem("sb_cached_user");
+      localStorage.removeItem("sb_cached_profile");
+    }
   };
 
   return { session, user, profile, loading, signOut };
